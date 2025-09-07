@@ -127,6 +127,8 @@ function attachRenameHandlers(nameSpan: HTMLElement) {
     }
     nameClickTimer = window.setTimeout(() => {
       selectedLayerId = id;
+      document.dispatchEvent(new CustomEvent('layers:selection-changed', { detail: { id } }));
+      document.dispatchEvent(new CustomEvent('canvas:rerender'));
       renderLayerList();
       renderLayerDetails();
       nameClickTimer = null;
@@ -399,6 +401,8 @@ export function renderLayerList() {
       }
 
       selectedLayerId = layer.id;
+      document.dispatchEvent(new CustomEvent('layers:selection-changed', { detail: { id: layer.id } }));
+      document.dispatchEvent(new CustomEvent('canvas:rerender'));
       renderLayerList();
       renderLayerDetails();
     });

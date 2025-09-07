@@ -5,6 +5,6 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    target: 'es2016',
+    target: 'es2017',
   },
 });
