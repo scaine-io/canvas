@@ -24,7 +24,8 @@ if (layerListEl) {
     setupLayerUI(layerListEl, addLayerBtn ?? undefined);
     // Wire the add-layer request to actually add and re-render
     layerListEl.addEventListener('layers:add-request', () => {
-        addLayer();
+        const layer = addLayer();
+        document.dispatchEvent(new CustomEvent('layers:selection-changed', {detail: {id: layer.id}}));
         renderLayerList();
     });
 } else {

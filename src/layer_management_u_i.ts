@@ -4,7 +4,7 @@ import {
     getSortedLayers,
     renameLayer,
     setLayerImageFromFile,
-    getLayerImage
+    getLayerImage, flipLayerImage
 } from './layer_management_functions';
 import {moveItem} from './arrayItemMover';
 
@@ -102,11 +102,67 @@ function renderLayerDetails() {
         }
     });
 
+const controlsRow = document.createElement('div');
+    controlsRow.style.display = 'flex';
+    controlsRow.style.gap = '6px';
+    controlsRow.style.alignItems = 'center';
+    controlsRow.style.flexWrap = 'wrap';
+
+    const flipHBtn = document.createElement('button');
+    flipHBtn.type = 'button';
+    flipHBtn.textContent = 'Flip H';
+    flipHBtn.title = 'Flip horizontally (updates the image)';
+
+    const flipVBtn = document.createElement('button');
+    flipVBtn.type = 'button';
+    flipVBtn.textContent = 'Flip V';
+    flipVBtn.title = 'Flip vertically (updates the image)';
+
+    const isLocked = !!layer.locked;
+    const hasImage = !!stored?.url;
+    flipHBtn.disabled = isLocked || !hasImage;
+    flipVBtn.disabled = isLocked || !hasImage;
+
+    flipHBtn.addEventListener('click', async () => {
+        console.log("flip");
+        if (isLocked) return;
+        try {
+            const updated = await flipLayerImage(layer.id, 'horizontal');
+            if (updated?.url) {
+                preview.src = updated.url;
+                preview.style.display = '';
+                if (updated.name) preview.alt = `Layer image preview: ${updated.name}`;
+            }
+            document.dispatchEvent(new CustomEvent('canvas:rerender'));
+        } catch (e) {
+            console.error('Flip H failed', e);
+        }
+    });
+
+    flipVBtn.addEventListener('click', async () => {
+        if (isLocked) return;
+        try {
+            const updated = await flipLayerImage(layer.id, 'vertical');
+            if (updated?.url) {
+                preview.src = updated.url;
+                preview.style.display = '';
+                if (updated.name) preview.alt = `Layer image preview: ${updated.name}`;
+            }
+            document.dispatchEvent(new CustomEvent('canvas:rerender'));
+        } catch (e) {
+            console.error('Flip V failed', e);
+        }
+    });
+
+    controlsRow.appendChild(fileLabel);
+    controlsRow.appendChild(flipHBtn);
+    controlsRow.appendChild(flipVBtn);
 
     previewWrap.appendChild(preview);
     panel.appendChild(title);
     panel.appendChild(previewWrap);
-    panel.appendChild(fileLabel);
+    panel.appendChild(controlsRow);
+
 }
 let nameClickTimer: number | null = null;
 

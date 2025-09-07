@@ -109,6 +109,48 @@ export function layerHasImage(layerId: number): boolean {
 export function getLayerById(id: number): Layer | undefined {
     return layers.find(l => l.id === id);
 }
+export async function flipLayerImage(
+    layerId: number,
+    axis: 'horizontal' | 'vertical'
+): Promise<LayerImage | undefined> {
+    const layer = getLayerById(layerId);
+    if (!layer || layer.locked) return;
+    const current = layer.image;
+    if (!current?.url) return;
+
+    const img = await loadImage(current.url);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('2D context not available');
+
+    ctx.save();
+    if (axis === 'horizontal') {
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+    } else {
+        ctx.translate(0, h);
+        ctx.scale(1, -1);
+    }
+    ctx.drawImage(img, 0, 0, w, h);
+    ctx.restore();
+
+    const blob: Blob = await new Promise((resolve, reject) =>                                     {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
+    });
+
+    const newUrl = URL.createObjectURL(blob);
+    const newName = current.name
+        ? `${current.name} (${axis === 'horizontal' ? 'flipped H' : 'flipped V'})`
+        : undefined;
+
+    // This will revoke the old blob URL if needed
+    return await setLayerImageFromURL(layerId, newUrl, newName);
+}
 
 export function renameLayer(id: number, newName: string) {
     const layer = getLayerById(id);
