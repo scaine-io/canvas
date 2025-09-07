@@ -42,7 +42,6 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 export async function setLayerImageFromURL(layerId: number, url: string, name?: string): Promise<LayerImage | undefined> {
   const layer = getLayerById(layerId);
   if (!layer) return;
-  if (layer.locked) return;
 
   const img = await loadImage(url);
 
@@ -66,7 +65,6 @@ export async function setLayerImageFromURL(layerId: number, url: string, name?: 
 export async function setLayerImageFromFile(layerId: number, file: File): Promise<LayerImage | undefined> {
   const layer = getLayerById(layerId);
   if (!layer) return;
-  if (layer.locked) return;
 
   const objectURL = URL.createObjectURL(file);
   try {
