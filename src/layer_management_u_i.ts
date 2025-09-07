@@ -94,10 +94,14 @@ function renderLayerDetails() {
                     if (latest.name) preview.alt = `Layer image preview: ${latest.name}`;
                 }
             }
+
+            // Request canvas to rerender after setting the image
+            document.dispatchEvent(new CustomEvent('canvas:rerender'));
         } catch (err) {
             console.error('Failed to set layer image from file:', err);
         }
     });
+
 
     previewWrap.appendChild(preview);
     panel.appendChild(title);
@@ -277,7 +281,11 @@ function attachDndHandlers(li: HTMLLIElement) {
 
         dragSrcLayerId = null;
         renderLayerList();
+
+        // Request canvas rerender after reordering
+        document.dispatchEvent(new CustomEvent('canvas:rerender'));
     });
+
 
     li.addEventListener('dragend', () => {
         cleanupDraggingClasses();
