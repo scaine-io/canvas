@@ -1,4 +1,3 @@
-// src/layers/store.ts
 import {Layer, LayerImage} from './types/layer';
 
 const layers: Layer[] = [];
@@ -9,7 +8,6 @@ export function getMaxZ(): number {
 }
 
 export function getSortedLayers(): Layer[] {
-    // Render top-most first
     return layers.slice().sort((a, b) => b.z - a.z);
 }
 
@@ -24,8 +22,6 @@ export function addLayer(name?: string, locked = false): Layer {
     layers.push(layer);
     return layer;
 }
-
-// ... existing code ...
 
 // Load an image to read its intrinsic size.
 async function loadImage(url: string): Promise<HTMLImageElement> {
@@ -109,6 +105,11 @@ export function layerHasImage(layerId: number): boolean {
 export function getLayerById(id: number): Layer | undefined {
     return layers.find(l => l.id === id);
 }
+
+/**
+ * Flips the image of a specified layer either horizontally or vertically.
+ *
+ */
 export async function flipLayerImage(
     layerId: number,
     axis: 'horizontal' | 'vertical'
@@ -122,6 +123,8 @@ export async function flipLayerImage(
     const w = img.naturalWidth || img.width;
     const h = img.naturalHeight || img.height;
 
+
+    //create a temporary canvas to flip the image
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;

@@ -1,6 +1,7 @@
 import {initCanvas} from './initCanvas';
 import {addLayer} from './layer_management_functions';
 import {setupLayerUI, renderLayerList} from './layer_management_u_i';
+import {Events} from "./types/events";
 
 
 const canvas = document.getElementById('app-canvas') as HTMLCanvasElement | null;
@@ -23,9 +24,9 @@ const exportBtn = document.getElementById('export-btn') as HTMLButtonElement | n
 if (layerListEl) {
     setupLayerUI(layerListEl, addLayerBtn ?? undefined);
     // Wire the add-layer request to actually add and re-render
-    layerListEl.addEventListener('layers:add-request', () => {
+    layerListEl.addEventListener(Events.EVENT_LAYER_ADDED, () => {
         const layer = addLayer();
-        document.dispatchEvent(new CustomEvent('layers:selection-changed', {detail: {id: layer.id}}));
+        document.dispatchEvent(new CustomEvent(Events.EVENT_SELECTION_CHANGED, {detail: {id: layer.id}}));
         renderLayerList();
     });
 } else {
@@ -38,7 +39,7 @@ renderLayerList();
 if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
         // Ensure the latest frame is rendered before exporting
-        document.dispatchEvent(new CustomEvent('canvas:export:begin'));
+        document.dispatchEvent(new CustomEvent(Events.EVENT_EXPORT_BEGIN));
         await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 
         const download = (blob: Blob) => {
@@ -57,14 +58,14 @@ if (exportBtn) {
 
         if ('toBlob' in canvas && typeof canvas.toBlob === 'function') {
             canvas.toBlob((blob) => {
-                document.dispatchEvent(new CustomEvent('canvas:export:end'));
+                document.dispatchEvent(new CustomEvent(Events.EVENT_EXPORT_END));
 
                 if (blob) download(blob);
             }, 'image/png');
         } else {
             // Fallback for very old browsers
             const dataUrl = canvas.toDataURL('image/png');
-            document.dispatchEvent(new CustomEvent('canvas:export:end'));
+            document.dispatchEvent(new CustomEvent(Events.EVENT_CANVAS_EXPORT_END));
 
             const res = await fetch(dataUrl);
             const blob = await res.blob();

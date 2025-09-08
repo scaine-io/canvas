@@ -1,4 +1,7 @@
 import {getSortedLayers} from './layer_management_functions';
+import {Layer} from "./types/layer";
+import {CanvasRerender} from "./helpers/canvas";
+import {Events} from "./types/events";
 
 // Simple in-memory image cache so we don't recreate Image objects each render.
 const imgCache = new Map<string, HTMLImageElement>();
@@ -118,19 +121,19 @@ export function initCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContex
     renderLayers(canvas, ctx);
 
     // Re-render whenever someone dispatches a rerender event (e.g., after image set or reorder)
-    document.addEventListener('canvas:rerender', () => {
+    document.addEventListener(Events.EVENT_RERENDER, () => {
         renderLayers(canvas, ctx);
     });
-    document.addEventListener('canvas:export:begin', () => {
+    document.addEventListener(Events.EVENT_EXPORT_BEGIN, () => {
         showSelectionOverlays = false;
         renderLayers(canvas, ctx);
     });
-    document.addEventListener('canvas:export:end', () => {
+    document.addEventListener(Events.EVENT_EXPORT_END, () => {
         showSelectionOverlays = true;
         renderLayers(canvas, ctx);
     });
 
-    document.addEventListener('layers:selection-changed', (e: Event) => {
+    document.addEventListener(Events.EVENT_SELECTION_CHANGED, (e: Event) => {
         selectedId = (e as CustomEvent<{ id: number | null }>).detail?.id ?? null;
         // Ensure overlays are visible when the user changes selection in the UI
         showSelectionOverlays = true;
@@ -224,7 +227,7 @@ export function initCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContex
         }
 
         renderLayers(canvas, ctx);
-        document.dispatchEvent(new CustomEvent('canvas:rerender'));
+        CanvasRerender();
     });
 
     canvas.addEventListener('pointerup', (e) => {
@@ -240,70 +243,23 @@ export function initCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContex
         }
     });
 
-    canvas.addEventListener('wheel', (e) => {
-        // Do not resize while dragging
-        if (dragMode) return;
-
-        const layers = getSortedLayers();
-        const layer = layers.find(l => l.id === selectedId && !l.locked);
-        if (!layer) return;
-
-        const p = toCanvasSpace(canvas, e.clientX, e.clientY);
-
-        // Determine current draw size (fall back to intrinsic if unset)
-        const imgW = layer.image?.width ?? 0;
-        const imgH = layer.image?.height ?? 0;
-        if (imgW <= 0 || imgH <= 0) return;
-
-        const curW = (layer.w && layer.w > 0) ? layer.w : imgW;
-        const curH = (layer.h && layer.h > 0) ? layer.h : imgH;
-
-        // Only resize if cursor is over the selected layer
-        if (!pointInRect(p.x, p.y, layer.x, layer.y, curW, curH)) return;
-
-        // Scale factor: negative deltaY => zoom in; positive => zoom out
-        // Using exponential for smooth scaling across devices
-        const scale = Math.exp(-e.deltaY * 0.001);
-        if (!isFinite(scale) || scale <= 0) return;
-
-        const minSize = 8;
-        let newW = Math.max(minSize, curW * scale);
-        let newH = Math.max(minSize, curH * scale);
-
-        // Keep the cursor anchored: adjust x/y so the point under the cursor stays fixed
-        const offsetX = p.x - layer.x;
-        const offsetY = p.y - layer.y;
-        const sx = newW / curW;
-        const sy = newH / curH;
-
-        let newX = p.x - offsetX * sx;
-        let newY = p.y - offsetY * sy;
-
-        // Round values to integers for crisp rendering
-        layer.x = Math.round(newX);
-        layer.y = Math.round(newY);
-        layer.w = Math.round(newW);
-        layer.h = Math.round(newH);
-
-        // Prevent page scroll while resizing
-        e.preventDefault();
-
-        renderLayers(canvas, ctx);
-        document.dispatchEvent(new CustomEvent('canvas:rerender'));
-    }, {passive: false});
-
+    canvas.addEventListener('wheel', (e) => scrollResizeHandler(e, canvas, ctx), {passive: false});
 }
 
-// Draw all visible layers' images on the canvas.
-// Assumes getSortedLayers returns top-most first; we draw bottom-first so top layers appear above.
+/**
+ *  * Draw all visible layers' images on the canvas.
+ *
+ * @param canvas
+ * @param ctx
+ */
 export function renderLayers(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const layersTopFirst = getSortedLayers();
     const layersBottomFirst = layersTopFirst.slice().reverse();
 
-    // Identify the bottom-most locked layer as the "background"
-    const backgroundLayer = layersBottomFirst.find(l => l.locked);
+    // Identify the background, which is always at z:0
+    const backgroundLayer = layersBottomFirst.find(l => l.z == 0);
 
     for (const layer of layersBottomFirst) {
         if (!layer.visible || !layer.image?.url) continue;
@@ -311,7 +267,7 @@ export function renderLayers(canvas: HTMLCanvasElement, ctx: CanvasRenderingCont
         const {url, width, height} = layer.image;
         const img = getImage(url, () => {
             // Trigger another draw once the image finishes loading
-            document.dispatchEvent(new CustomEvent('canvas:rerender'));
+            CanvasRerender();
         });
 
         if (!(img.complete && img.naturalWidth > 0)) {
@@ -334,24 +290,90 @@ export function renderLayers(canvas: HTMLCanvasElement, ctx: CanvasRenderingCont
 
         // If selected, draw selection rectangle and resize handles
         if (showSelectionOverlays && selectedId === layer.id) {
-            ctx.save();
-            ctx.strokeStyle = '#5b9cff';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4, 2]);
-            ctx.strokeRect(dx, dy, dw, dh);
-            ctx.setLineDash([]);
-            ctx.fillStyle = '#5b9cff';
-            const half = HANDLE_SIZE / 2;
-            const corners = [
-                {x: dx, y: dy},
-                {x: dx + dw, y: dy},
-                {x: dx + dw, y: dy + dh},
-                {x: dx, y: dy + dh},
-            ];
-            for (const c of corners) {
-                ctx.fillRect(c.x - half, c.y - half, HANDLE_SIZE, HANDLE_SIZE);
-            }
-            ctx.restore();
+            drawBox(ctx, layer, dw, dh, dx, dy);
         }
     }
+}
+
+function scrollResizeHandler(e: WheelEvent, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+      // Prevent page scroll while resizing
+    e.preventDefault();
+
+    // Do not resize while dragging
+    if (dragMode) return;
+
+    const layers = getSortedLayers();
+    const layer = layers.find(l => l.id === selectedId && !l.locked);
+    if (!layer) return;
+
+    const p = toCanvasSpace(canvas, e.clientX, e.clientY);
+
+    // Determine current draw size (fall back to intrinsic if unset)
+    const imgW = layer.image?.width ?? 0;
+    const imgH = layer.image?.height ?? 0;
+    if (imgW <= 0 || imgH <= 0) return;
+
+    const curW = (layer.w && layer.w > 0) ? layer.w : imgW;
+    const curH = (layer.h && layer.h > 0) ? layer.h : imgH;
+
+    // Only resize if cursor is over the selected layer
+    if (!pointInRect(p.x, p.y, layer.x, layer.y, curW, curH)) return;
+
+    // Scale factor: negative deltaY => zoom in; positive => zoom out
+    // Using exponential for smooth scaling across devices
+    const scale = Math.exp(-e.deltaY * 0.001);
+    if (!isFinite(scale) || scale <= 0) return;
+
+    const minSize = 8;
+    let newW = Math.max(minSize, curW * scale);
+    let newH = Math.max(minSize, curH * scale);
+
+    // Keep the cursor anchored: adjust x/y so the point under the cursor stays fixed
+    const offsetX = p.x - layer.x;
+    const offsetY = p.y - layer.y;
+    const sx = newW / curW;
+    const sy = newH / curH;
+
+    let newX = p.x - offsetX * sx;
+    let newY = p.y - offsetY * sy;
+
+    // Round values to integers for crisp rendering
+    layer.x = Math.round(newX);
+    layer.y = Math.round(newY);
+    layer.w = Math.round(newW);
+    layer.h = Math.round(newH);
+
+    renderLayers(canvas, ctx);
+    CanvasRerender();
+}
+
+/**
+ *  * Draw a selection rectangle around a layer.
+ *
+ * @param ctx
+ * @param layer
+ * @param dw
+ * @param dh
+ * @param dx
+ * @param dy
+ **/
+function drawBox(ctx: CanvasRenderingContext2D, layer: Layer, dw: number, dh: number, dx: number, dy: number) {
+    ctx.save();
+    ctx.strokeStyle = '#5b9cff';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 2]);
+    ctx.strokeRect(dx, dy, dw, dh);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#5b9cff';
+    const half = HANDLE_SIZE / 2;
+    const corners = [
+        {x: dx, y: dy},
+        {x: dx + dw, y: dy},
+        {x: dx + dw, y: dy + dh},
+        {x: dx, y: dy + dh},
+    ];
+    for (const c of corners) {
+        ctx.fillRect(c.x - half, c.y - half, HANDLE_SIZE, HANDLE_SIZE);
+    }
+    ctx.restore();
 }
