@@ -18,7 +18,6 @@ let selectedLayerId: number | null = null;
 // Details panel element (optional, if present in DOM)
 let layerDetailsElRef: HTMLDivElement | null = null;
 
-// ... existing code ...
 function appendEmpty(panel: HTMLElement, text: string): void {
     const empty = document.createElement('div');
     empty.className = 'layer-details-empty';
@@ -146,7 +145,6 @@ function renderLayerDetails() {
     panel.appendChild(controlsRow);
 }
 
-// ... existing code ...
 
 let nameClickTimer: number | null = null;
 

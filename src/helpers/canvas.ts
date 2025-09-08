@@ -1,4 +1,5 @@
-import {Events} from "../types/layer";
+import {Events} from "../types/events";
+
 
 export async function ConvertCanvasToBlob(canvas: HTMLCanvasElement) {
     //convert canvas to blob
