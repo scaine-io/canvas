@@ -1,10 +1,9 @@
-import {initCanvas} from './initCanvas';
-import {addLayer} from './layer_management_functions';
-import {setupLayerUI, renderLayerList} from './layer_management_u_i';
-import {Events} from "./types/events";
+import { initCanvas } from './initCanvas.js';
+import { addLayer } from './ui_functions.js';
+import { setupLayerUI, renderLayerList } from './layer_functions.js';
+import { Events } from './events.js';
 
-
-const canvas = document.getElementById('app-canvas') as HTMLCanvasElement | null;
+const canvas = document.getElementById('app-canvas');
 if (!canvas) {
     throw new Error('Canvas element with id "app-canvas" not found');
 }
@@ -16,17 +15,17 @@ if (!ctx) {
 
 initCanvas(canvas, ctx);
 
-const layerListEl = document.getElementById('layer-list') as HTMLUListElement | null;
-const addLayerBtn = document.getElementById('add-layer-btn') as HTMLButtonElement | null;
-const exportBtn = document.getElementById('export-btn') as HTMLButtonElement | null;
-
+const layerListEl = document.getElementById('layer-list');
+const addLayerBtn = document.getElementById('add-layer-btn');
+const exportBtn = document.getElementById('export-btn');
 
 if (layerListEl) {
-    setupLayerUI(layerListEl, addLayerBtn ?? undefined);
+    setupLayerUI(layerListEl, addLayerBtn || undefined);
+
     // Wire the add-layer request to actually add and re-render
-    layerListEl.addEventListener(Events.EVENT_LAYER_ADDED, () => {
+    layerListEl.addEventListener(Events.EVENT_LAYER_ADDED, function () {
         const layer = addLayer();
-        document.dispatchEvent(new CustomEvent(Events.EVENT_SELECTION_CHANGED, {detail: {id: layer.id}}));
+        document.dispatchEvent(new CustomEvent(Events.EVENT_SELECTION_CHANGED, { detail: { id: layer.id } }));
         renderLayerList();
     });
 } else {
@@ -36,17 +35,18 @@ if (layerListEl) {
 // Seed with a default background layer (locked and always at the bottom)
 addLayer('Background', true);
 renderLayerList();
+
 if (exportBtn) {
-    exportBtn.addEventListener('click', async () => {
+    exportBtn.addEventListener('click', async function () {
         // Ensure the latest frame is rendered before exporting
         document.dispatchEvent(new CustomEvent(Events.EVENT_EXPORT_BEGIN));
-        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        await new Promise(resolve => requestAnimationFrame(resolve));
 
-        const download = (blob: Blob) => {
+        const download = function (blob) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             const ts = new Date();
-            const pad = (n: number) => n.toString().padStart(2, '0');
+            const pad = n => n.toString().padStart(2, '0');
             const filename = `canvas-${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}-${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.png`;
             a.href = url;
             a.download = filename;
@@ -56,10 +56,9 @@ if (exportBtn) {
             URL.revokeObjectURL(url);
         };
 
-        if ('toBlob' in canvas && typeof canvas.toBlob === 'function') {
-            canvas.toBlob((blob) => {
+        if (canvas.toBlob) {
+            canvas.toBlob(function (blob) {
                 document.dispatchEvent(new CustomEvent(Events.EVENT_EXPORT_END));
-
                 if (blob) download(blob);
             }, 'image/png');
         } else {

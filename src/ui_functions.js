@@ -1,17 +1,17 @@
-import {Layer, LayerImage} from './types/layer';
+import {Layer} from "./types/layer";
 
-const layers: Layer[] = [];
+const layers = [];
 let nextLayerId = 1;
 
-export function getMaxZ(): number {
+function getMaxZ() {
     return layers.length ? Math.max(...layers.map(l => l.z)) : -1;
 }
 
-export function getSortedLayers(): Layer[] {
+function getSortedLayers() {
     return layers.slice().sort((a, b) => b.z - a.z);
 }
 
-export function addLayer(name?: string, locked = false): Layer {
+function addLayer(name, locked = false) {
     const layer = new Layer(
         nextLayerId++,
         name ?? `Layer ${nextLayerId - 1}`,
@@ -24,7 +24,7 @@ export function addLayer(name?: string, locked = false): Layer {
 }
 
 // Load an image to read its intrinsic size.
-async function loadImage(url: string): Promise<HTMLImageElement> {
+function loadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
@@ -34,26 +34,24 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 // Replace any existing image on the layer with an image from URL.
-// Safely revokes previous blob URLs.
-export async function setLayerImageFromURL(layerId: number, url: string, name?: string): Promise<LayerImage | undefined> {
+async function setLayerImageFromURL(layerId, url, name) {
     const layer = getLayerById(layerId);
     if (!layer) return;
 
     const img = await loadImage(url);
 
-    // Revoke existing blob URL if necessary
     if (layer.image?.url && layer.image.url.startsWith('blob:')) {
         URL.revokeObjectURL(layer.image.url);
     }
 
-    const next: LayerImage = {
+    const next = {
         url,
         width: img.naturalWidth || img.width,
         height: img.naturalHeight || img.height,
         name,
     };
     layer.image = next;
-    // Initialize draw dimensions to the intrinsic image size if not set yet
+
     if (!layer.locked) {
         if (!layer.w || layer.w <= 0) layer.w = next.width;
         if (!layer.h || layer.h <= 0) layer.h = next.height;
@@ -63,8 +61,7 @@ export async function setLayerImageFromURL(layerId: number, url: string, name?: 
 }
 
 // Set layer image from a File chosen by the user.
-// Creates a blob URL and revokes it on replacement/clear.
-export async function setLayerImageFromFile(layerId: number, file: File): Promise<LayerImage | undefined> {
+async function setLayerImageFromFile(layerId, file) {
     const layer = getLayerById(layerId);
     if (!layer) return;
 
@@ -77,8 +74,8 @@ export async function setLayerImageFromFile(layerId: number, file: File): Promis
     }
 }
 
-// Remove the image from the layer and revoke blob URL if used.
-export function clearLayerImage(layerId: number): void {
+// Remove the image from the layer.
+function clearLayerImage(layerId) {
     const layer = getLayerById(layerId);
     if (!layer) return;
 
@@ -93,27 +90,20 @@ export function clearLayerImage(layerId: number): void {
     }
 }
 
-// Accessors
-export function getLayerImage(layerId: number): LayerImage | undefined {
+function getLayerImage(layerId) {
     return getLayerById(layerId)?.image;
 }
 
-export function layerHasImage(layerId: number): boolean {
+function layerHasImage(layerId) {
     return !!getLayerById(layerId)?.image;
 }
 
-export function getLayerById(id: number): Layer | undefined {
+function getLayerById(id) {
     return layers.find(l => l.id === id);
 }
 
-/**
- * Flips the image of a specified layer either horizontally or vertically.
- *
- */
-export async function flipLayerImage(
-    layerId: number,
-    axis: 'horizontal' | 'vertical'
-): Promise<LayerImage | undefined> {
+// Flip image horizontally or vertically
+async function flipLayerImage(layerId, axis) {
     const layer = getLayerById(layerId);
     if (!layer || layer.locked) return;
     const current = layer.image;
@@ -123,8 +113,6 @@ export async function flipLayerImage(
     const w = img.naturalWidth || img.width;
     const h = img.naturalHeight || img.height;
 
-
-    //create a temporary canvas to flip the image
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
@@ -142,8 +130,8 @@ export async function flipLayerImage(
     ctx.drawImage(img, 0, 0, w, h);
     ctx.restore();
 
-    const blob: Blob = await new Promise((resolve, reject) =>                                     {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
+    const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
     });
 
     const newUrl = URL.createObjectURL(blob);
@@ -151,11 +139,10 @@ export async function flipLayerImage(
         ? `${current.name} (${axis === 'horizontal' ? 'flipped H' : 'flipped V'})`
         : undefined;
 
-    // This will revoke the old blob URL if needed
     return await setLayerImageFromURL(layerId, newUrl, newName);
 }
 
-export function renameLayer(id: number, newName: string) {
+function renameLayer(id, newName) {
     const layer = getLayerById(id);
     if (!layer) return;
     const trimmed = newName.trim();
@@ -163,6 +150,22 @@ export function renameLayer(id: number, newName: string) {
     layer.name = trimmed;
 }
 
-export function getAllLayers(): Layer[] {
+function getAllLayers() {
     return layers;
 }
+
+export {
+    getMaxZ,
+    getSortedLayers,
+    addLayer,
+    setLayerImageFromURL,
+    setLayerImageFromFile,
+    clearLayerImage,
+    getLayerImage,
+    layerHasImage,
+    getLayerById,
+    flipLayerImage,
+    renameLayer,
+    getAllLayers
+};
+
