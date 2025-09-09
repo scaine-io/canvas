@@ -4,12 +4,14 @@ import {
   renameLayer,
   setLayerImageFromFile,
   getLayerImage,
-  flipLayerImage
+    flipLayerImage,
+    setLayerImageFromURL
 } from './ui_functions.js';
 
 import { moveItem } from './helpers/array.js';
 import { CanvasRerender } from './helpers/canvas.js';
 import { Events } from './events.js';
+import {removeBackground} from "./helpers/cutout";
 
 let layerListElRef = null;
 let addLayerHandler = null;
@@ -126,8 +128,14 @@ function renderLayerDetails() {
     flipVBtn.textContent = 'Flip V';
     flipVBtn.title = 'Flip vertically (updates the image)';
 
+    const removeBackgroundBtn = document.createElement('button');
+    removeBackgroundBtn.type = 'button';
+    removeBackgroundBtn.textContent = 'Remove Background';
+    removeBackgroundBtn.title = 'Remove image background';
+
     const isLocked = !!layer.locked;
     refreshFlipButtons(flipHBtn, flipVBtn, isLocked, preview);
+    removeBackgroundBtn.disabled = isLocked || preview.style.display === 'none' || !layer.image?.url;
 
     fileInput.addEventListener('change', () =>
         onFileChange(fileInput, layer.id, preview, flipHBtn, flipVBtn, isLocked)
@@ -139,7 +147,37 @@ function renderLayerDetails() {
         if (!isLocked) onFlip('vertical', layer.id, preview);
     });
 
+
+    removeBackgroundBtn.addEventListener('click', async () => {
+        if (!isLocked) {
+            removeBackgroundBtn.disabled = true;
+            const spinner = document.createElement('div');
+            spinner.className = 'spinner';
+            removeBackgroundBtn.textContent = 'Removing';
+            removeBackgroundBtn.appendChild(spinner);
+            try {
+                const updated = await removeBackground(layer.image.url);
+                layer.hasBackgroundRemoved = true;
+                const info = await setLayerImageFromURL(layer.id, updated);
+                setPreview(preview, info);
+                console.log(`Background removed for layer: ${layer.name}`);
+                CanvasRerender();
+            } catch (e) {
+                console.error('Background removal failed:', e);
+                alert('Failed to remove background: ' + (e.message || 'Unknown error'));
+            } finally {
+                const spinner = removeBackgroundBtn.querySelector('.spinner');
+                if (spinner) {
+                    spinner.remove();
+                }
+                removeBackgroundBtn.disabled = isLocked || preview.style.display === 'none' || !layer.image?.url;
+                removeBackgroundBtn.textContent = 'Remove Background';
+            }
+        }
+    });
+
     controlsRow.appendChild(fileLabel);
+    controlsRow.appendChild(removeBackgroundBtn);
     controlsRow.appendChild(flipHBtn);
     controlsRow.appendChild(flipVBtn);
 
@@ -377,6 +415,24 @@ function handleLayerListDblClick(e) {
 }
 
 function setupLayerUI(layerListEl, addLayerBtn) {
+    const style = document.createElement('style');
+    style.textContent = `
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-left: 6px;
+            border: 2px solid #ffffff3b;
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
     layerListElRef = layerListEl;
     layerDetailsElRef = ensureLayerDetailsPanel(layerListEl);
 
@@ -406,7 +462,9 @@ function renderLayerList() {
 
         const metaSpan = document.createElement('span');
         metaSpan.className = 'layer-meta';
-        metaSpan.textContent = layer.visible ? `z:${layer.z}` : `z:${layer.z} (hidden)`;
+        metaSpan.textContent = layer.visible
+            ? `z:${layer.z}${layer.hasBackgroundRemoved ? ' ✓' : ''}`
+            : `z:${layer.z}${layer.hasBackgroundRemoved ? ' ✓' : ''} (hidden)`;
 
         if (selectedLayerId === layer.id) {
             li.classList.add('selected');

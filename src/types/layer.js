@@ -3,6 +3,7 @@ export class Layer {
         this.id = id;
         this.name = name;
         this.visible = visible;
+        this.hasBackgroundRemoved = false;
         this.z = z;
         this.locked = locked;
         this.image = undefined;
