@@ -1,4 +1,4 @@
-import {Layer} from "./types/layer";
+import {Layer} from "./types/layer.js";
 
 const layers = [];
 let nextLayerId = 1;
