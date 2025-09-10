@@ -11,7 +11,7 @@ import {
 import { moveItem } from './helpers/array.js';
 import { CanvasRerender } from './helpers/canvas.js';
 import { Events } from './types/events.js';
-import {removeBackground} from "./helpers/cutout";
+import {removeBackground} from "./helpers/cutout.js";
 
 let layerListElRef = null;
 let addLayerHandler = null;
