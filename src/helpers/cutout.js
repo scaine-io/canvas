@@ -1,20 +1,21 @@
 const apiUrl = "https://api-463323727798.europe-west1.run.app";
-const getStatus = async (id) => {
+const maxWaitTime = 50000;
+const getStatus = async (id, image) => {
     const response = await fetch(`${apiUrl}/status/${id}`, {
-        method: 'GET'
+        method: 'GET',
+        cache: 'no-cache',
+        mode: "cors"
     })
     const json = await response.json();
-    console.log(JSON.stringify(json))
-    // console.log(json.status)
-    // if (json.status !== 'success') throw new Error(JSON.stringify(json))
-    console.log(JSON.stringify(json))
 
     if (json.infer_requests[0].state !== 'success'){
-        console.log(json.infer_requests[0].state)
-        console.log("waiting")
+
         await new Promise(resolve => setTimeout(resolve, 1000));
-        return await getStatus(id);
+        return await getStatus(id, image);
     }
+
+    const elapsedTime = new Date() - new Date(json.infer_requests[0].create_time);
+    console.log(`Removing the background took ${elapsedTime} ms `)
     return json.infer_requests[0]?.output.image_url;
 
 }
@@ -24,6 +25,7 @@ async function urlToBlob(url) {
     if (!response.ok) throw new Error("Failed to fetch image as blob");
     return await response.blob();
 }
+
 
 
 export const removeBackground = async (image) => {
@@ -45,8 +47,8 @@ export const removeBackground = async (image) => {
     console.log(id)
 
     // Sleep for 5 seconds
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Check status
-    return await getStatus(id);
+    return await getStatus(id, image);
 }

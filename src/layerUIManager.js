@@ -55,7 +55,8 @@ async function onFileChange(input, layerId, preview, h, v, locked) {
             const info = await setLayerImageFromFile(layerId, file);
             setPreview(preview, info);
             refreshFlipButtons(h, v, locked, preview);
-        CanvasRerender();
+            document.dispatchEvent(new CustomEvent(Events.EVENT_SELECTION_CHANGED, { detail: { id: layerId }}))
+            CanvasRerender();
     } catch (err) {
         console.error('Failed to set layer image from file:', err);
     }
@@ -143,7 +144,7 @@ function renderLayerDetails() {
 
     const isLocked = !!layer.locked;
     refreshFlipButtons(flipHBtn, flipVBtn, isLocked, preview);
-    removeBackgroundBtn.disabled = isLocked || preview.style.display === 'none' || !layer.image?.url;
+    // removeBackgroundBtn.disabled = isLocked || preview.style.display === 'none' || !layer.image?.url;
 
     fileInput.addEventListener('change', () =>
         onFileChange(fileInput, layer.id, preview, flipHBtn, flipVBtn, isLocked)
@@ -157,6 +158,7 @@ function renderLayerDetails() {
 
 
     removeBackgroundBtn.addEventListener('click', async () => {
+        console.log(isLocked)
         if (!isLocked) {
             removeBackgroundBtn.disabled = true;
             const spinner = document.createElement('div');
@@ -186,8 +188,8 @@ function renderLayerDetails() {
 
     controlsRow.appendChild(fileLabel);
     controlsRow.appendChild(removeBackgroundBtn);
-    controlsRow.appendChild(flipHBtn);
-    controlsRow.appendChild(flipVBtn);
+    // controlsRow.appendChild(flipHBtn);
+    // controlsRow.appendChild(flipVBtn);
 
     previewWrap.appendChild(preview);
     panel.appendChild(title);
