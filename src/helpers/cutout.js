@@ -1,10 +1,7 @@
 const apiUrl = "https://api-463323727798.europe-west1.run.app";
 const getStatus = async (id) => {
-    const response = await fetch(`${apiUrl}status/${id}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
+    const response = await fetch(`${apiUrl}/status/${id}`, {
+        method: 'GET'
     })
     const json = await response.json();
     console.log(JSON.stringify(json))
@@ -22,7 +19,6 @@ const getStatus = async (id) => {
 
 }
 
-
 async function urlToBlob(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error("Failed to fetch image as blob");
@@ -30,12 +26,12 @@ async function urlToBlob(url) {
 }
 
 
- const removeBackground = async (image) => {
+export const removeBackground = async (image) => {
     const formData = new FormData();
     const blob = await urlToBlob(image.url);
     formData.append('image', blob, 'image.jpg');
 
-    const response = await fetch("https://api-463323727798.europe-west1.run.app/upload", {
+    const response = await fetch(`${apiUrl}/upload`, {
         method: 'POST',
         body: formData
     });

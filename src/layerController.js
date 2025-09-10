@@ -113,6 +113,7 @@ async function flipLayerImage(layerId, axis) {
     const w = img.naturalWidth || img.width;
     const h = img.naturalHeight || img.height;
 
+    // creating a new canvas to draw on, in order to use the built in canvas functions
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
