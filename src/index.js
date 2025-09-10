@@ -1,6 +1,6 @@
-import { initCanvas } from './initCanvas.js';
-import { addLayer } from './ui_functions.js';
-import { setupLayerUI, renderLayerList } from './layer_functions.js';
+import { initCanvas } from './canvasLayerRenderer.js';
+import { addLayer } from './layerController.js';
+import { setupLayerUI, renderLayerList } from './layerUIManager.js';
 import { Events } from './events.js';
 
 const canvas = document.getElementById('app-canvas');

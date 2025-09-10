@@ -6,7 +6,7 @@ import {
   getLayerImage,
     flipLayerImage,
     setLayerImageFromURL
-} from './ui_functions.js';
+} from './layerController.js';
 
 import { moveItem } from './helpers/array.js';
 import { CanvasRerender } from './helpers/canvas.js';

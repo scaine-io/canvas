@@ -1,4 +1,4 @@
-import { getSortedLayers } from './ui_functions.js';
+import { getSortedLayers } from './layerController.js';
 import { CanvasRerender } from './helpers/canvas.js';
 import { Events } from './events.js';
 // Simple in-memory image cache

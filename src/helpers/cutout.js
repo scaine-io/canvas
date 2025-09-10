@@ -116,29 +116,3 @@ export const removeBackground = async (image) => {
     // Check status
     return await getStatus(id);
 }
-
-// run();
-
-/*
-const response = await fetch(url, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': apiKey,
-  },
-  body: JSON.stringify({
-  "input": {
-    "image_filename": "https://tstake.io/test.jpg"
-  },
-  "wait": 0
-})
-});
-
-const json = await response.json();
-
-console.log(json);
-console.log("");
-console.log("https://ondemand-outputs.thetaedgecloud.com/".concat(json.body.infer_requests[0].service_id,"/",json.body.infer_requests[0].project_id,"/",json.body.infer_requests[0].id,"_image_url.jpg"));
-*/
-//
-// getPresignedurl();
