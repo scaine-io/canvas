@@ -118,6 +118,7 @@ function renderLayerDetails() {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
+    fileInput.accept = 'image/webp,image/jpeg';
     fileInput.style.display = 'none';
     fileLabel.appendChild(fileInput);
 
@@ -167,8 +168,9 @@ function renderLayerDetails() {
             removeBackgroundBtn.appendChild(spinner);
             try {
                 const updated = await removeBackground(layer.image);
+                console.log(updated)
                 layer.hasBackgroundRemoved = true;
-                const info = await setLayerImageFromURL(layer.id, updated);
+                const info = await setLayerImageFromURL(layer.id, updated.url);
                 setPreview(preview, info);
                 console.log(`Background removed for layer: ${layer.name}`);
                 CanvasRerender();
