@@ -10,7 +10,7 @@ import {
 
 import { moveItem } from './helpers/array.js';
 import { CanvasRerender } from './helpers/canvas.js';
-import { Events } from './events.js';
+import { Events } from './types/events.js';
 import {removeBackground} from "./helpers/cutout";
 
 let layerListElRef = null;
@@ -50,11 +50,11 @@ function refreshFlipButtons(h, v, locked, preview) {
 
 async function onFileChange(input, layerId, preview, h, v, locked) {
     const file = input.files?.[0];
-    if (!file) return;
-    try {
-        const info = await setLayerImageFromFile(layerId, file);
-        setPreview(preview, info);
-        refreshFlipButtons(h, v, locked, preview);
+        if (!file) return;
+        try {
+            const info = await setLayerImageFromFile(layerId, file);
+            setPreview(preview, info);
+            refreshFlipButtons(h, v, locked, preview);
         CanvasRerender();
     } catch (err) {
         console.error('Failed to set layer image from file:', err);
@@ -71,6 +71,14 @@ async function onFlip(axis, layerId, preview) {
     }
 }
 
+/**
+ * Handles the flip functionality for a layer's image in the editor.
+ *
+ * When invoked, this function flips the image of the selected layer
+ * either horizontally or vertically, based on the provided axis.
+ * It updates the layer's preview with the flipped image and triggers
+ * a canvas re-render to reflect the changes in the editor.
+ */
 function renderLayerDetails() {
     const panel = layerDetailsElRef;
     if (!panel) return;
@@ -156,7 +164,7 @@ function renderLayerDetails() {
             removeBackgroundBtn.textContent = 'Removing';
             removeBackgroundBtn.appendChild(spinner);
             try {
-                const updated = await removeBackground(layer.image.url);
+                const updated = await removeBackground(layer.image);
                 layer.hasBackgroundRemoved = true;
                 const info = await setLayerImageFromURL(layer.id, updated);
                 setPreview(preview, info);
@@ -189,6 +197,11 @@ function renderLayerDetails() {
 
 let nameClickTimer = null;
 
+/**
+ * Timer variable to handle single or double click events on a layer name span.
+ * Used to distinguish between single-click (to select and display layer details)
+ * and double-click (to trigger inline rename).
+ */
 function attachRenameHandlers(nameSpan) {
     nameSpan.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -230,6 +243,10 @@ function attachRenameHandlers(nameSpan) {
     });
 }
 
+/**
+ * Attaches event handlers to a layer name span element for handling click and double-click events.
+ * Single click selects and displays layer details, while double-click triggers inline rename.
+ */
 function startInlineRename(li, id, nameEl) {
     const current = nameEl.textContent ?? '';
     const input = document.createElement('input');
@@ -266,6 +283,12 @@ function startInlineRename(li, id, nameEl) {
     });
 }
 
+
+/**
+ * Attaches drag-and-drop event handlers to a list item (layer in the UI).
+ * Handles drag start, drag over, drop, and drag end events while ensuring proper
+ * layer reordering logic and visual updates for the dragged and target layers.
+ */
 function attachDndHandlers(li) {
     li.addEventListener('dragstart', (e) => {
         const target = e.target;
@@ -369,6 +392,12 @@ const LAYER_DETAILS_ID = 'layer-details';
 const LAYER_ITEM_SELECTOR = 'li.layer-item';
 const LAYER_NAME_SELECTOR = '.layer-name';
 
+
+/**
+ * Ensures the layer details panel exists below the layer list element.
+ * If the panel doesn't exist, it creates a new one, applies necessary attributes,
+ * and inserts it into the DOM.
+ */
 function ensureLayerDetailsPanel(listEl) {
     let panel = document.getElementById(LAYER_DETAILS_ID);
     if (!panel) {
@@ -398,6 +427,11 @@ function getLayerIdFromItem(li) {
     return Number.isFinite(id) ? id : null;
 }
 
+
+/**
+ * Handles the double-click event on a layer list element.
+ * Triggers the inline rename functionality for the target layer.
+ */
 function handleLayerListDblClick(e) {
     const target = e.target;
     if (!target) return;
@@ -414,6 +448,12 @@ function handleLayerListDblClick(e) {
     startInlineRename(li, id, nameEl);
 }
 
+
+/**
+ * Sets up the user interface for managing layers.
+ * This includes applying styles, attaching event listeners for interactions
+ * such as double-click, drag-and-drop, and rendering the initial layer list.
+ */
 function setupLayerUI(layerListEl, addLayerBtn) {
     const style = document.createElement('style');
     style.textContent = `
@@ -443,6 +483,10 @@ function setupLayerUI(layerListEl, addLayerBtn) {
     renderLayerList();
 }
 
+/**
+ * Initializes the UI components for managing layers, including setting up
+ * styles, event listeners for layer interactions, and rendering the layer list.
+ */
 function renderLayerList() {
     const layerListEl = layerListElRef;
     if (!layerListEl) return;

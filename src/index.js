@@ -1,7 +1,7 @@
 import { initCanvas } from './canvasLayerRenderer.js';
 import { addLayer } from './layerController.js';
 import { setupLayerUI, renderLayerList } from './layerUIManager.js';
-import { Events } from './events.js';
+import { Events } from './types/events.js';
 
 const canvas = document.getElementById('app-canvas');
 if (!canvas) {
@@ -35,6 +35,7 @@ if (layerListEl) {
 // Seed with a default background layer (locked and always at the bottom)
 addLayer('Background', true);
 renderLayerList();
+
 
 if (exportBtn) {
     exportBtn.addEventListener('click', async function () {

@@ -1,9 +1,14 @@
 import { getSortedLayers } from './layerController.js';
 import { CanvasRerender } from './helpers/canvas.js';
-import { Events } from './events.js';
+import { Events } from './types/events.js';
 // Simple in-memory image cache
 const imgCache = new Map();
 
+/**
+ * A simple in-memory image caching function.
+ * Retrieves an image from the cache if available, otherwise loads it from the given URL.
+ * Calls the provided `onLoaded` callback once the image is loaded.
+ */
 function getImage(url, onLoaded) {
     let img = imgCache.get(url);
     if (!img) {
@@ -36,6 +41,11 @@ let showSelectionOverlays = true;
 
 const HANDLE_SIZE = 8;
 
+/**
+ * Converts client coordinates (e.g., from a mouse pointer event) to canvas space coordinates.
+ * This accounts for the canvas's size and position within the viewport.
+ *
+ */
 function toCanvasSpace(canvas, clientX, clientY) {
     const r = canvas.getBoundingClientRect();
     const x = (clientX - r.left) * (canvas.width / r.width);
@@ -47,6 +57,14 @@ function pointInRect(px, py, x, y, w, h) {
     return px >= x && py >= y && px <= x + w && py <= y + h;
 }
 
+
+/**
+ * Determines whether a given point (px, py) lies within the bounds of a rectangle
+ * defined by its position (x, y) and dimensions (w, h).
+ *
+ * Useful for detecting user interactions such as clicks or drags within specific
+ * areas of a canvas or UI component.
+ */
 function getHandleAt(layer, px, py) {
     const corners = [
         { id: 'nw', x: layer.x, y: layer.y },
@@ -62,6 +80,11 @@ function getHandleAt(layer, px, py) {
     return null;
 }
 
+
+/**
+ * Determines which resizing handle (if any) is located at the given coordinates (px, py)
+ * relative to the specified layer's rectangle.
+ */
 function applyResize(handle, dx, dy, rect) {
     const minSize = 8;
     let { x, y, w, h } = rect;
@@ -91,6 +114,14 @@ function applyResize(handle, dx, dy, rect) {
     return { x, y, w, h };
 }
 
+
+/**
+ * Initializes the canvas by setting up rendering, event listeners, and interaction handlers.
+ *
+ * This function establishes the rendering mechanism for layers on the canvas, handles custom events
+ * to update the canvas during actions like exporting or selection changes, and defines pointer-based
+ * interactions for moving or resizing layers on the canvas.
+ */
 function initCanvas(canvas, ctx) {
     renderLayers(canvas, ctx);
 
@@ -176,6 +207,12 @@ function initCanvas(canvas, ctx) {
     canvas.addEventListener('wheel', (e) => scrollResizeHandler(e, canvas, ctx), { passive: false });
 }
 
+
+/**
+ * Renders the layers on the provided canvas and context.
+ * Clears the canvas, orders layers, and draws each layer in sequence.
+ * Handles special rendering for background layers and selected overlays.
+ */
 function renderLayers(canvas, ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const layersTopFirst = getSortedLayers();
@@ -206,6 +243,11 @@ function renderLayers(canvas, ctx) {
     }
 }
 
+
+/**
+ * Handles canvas scroll events for resizing layers dynamically.
+ * Adjusts the size and position of the selected layer based on scroll input.
+ */
 function scrollResizeHandler(e, canvas, ctx) {
     e.preventDefault();
     if (dragMode) return;
